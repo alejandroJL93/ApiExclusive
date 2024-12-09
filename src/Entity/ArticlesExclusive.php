@@ -2,14 +2,22 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Doctrine\Orm\Filter\RangeFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
+use ApiPlatform\Serializer\Filter\PropertyFilter;
 use App\Repository\ArticlesExclusiveRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ArticlesExclusiveRepository::class)]
 #[ApiResource (
@@ -17,12 +25,19 @@ use Doctrine\ORM\Mapping as ORM;
     description: "Articulos de la tienda exclusive",
     operations: [
         new Get(),
+        new GetCollection(),
         new Post(),
         new Put(),
         new Patch(),
         new Delete(),
-    ]
+    ],
+    normalizationContext: [
+        'groups' => ['article:read']
+    ],
+    denormalizationContext: ['groups' => ['article:write']],
+    paginationItemsPerPage: 10,
 )]
+#[ApiFilter(PropertyFilter::class)]
 class ArticlesExclusive
 {
     #[ORM\Id]
@@ -31,31 +46,48 @@ class ArticlesExclusive
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["article:read","article:write"])]
+    #[ApiFilter(SearchFilter::class,strategy: 'partial')]
     private ?string $name = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(["article:read","article:write"])]
+    #[ApiFilter(SearchFilter::class,strategy: 'partial')]
     private ?string $description = null;
 
     #[ORM\Column]
+    #[Groups(["article:read","article:write"])]
+    #[ApiFilter(RangeFilter::class)]
     private ?int $price = null;
     /**
      * Stock disponible.
      */
     #[ORM\Column(nullable: true)]
+    #[Groups(["article:read","article:write"])]
     private ?int $stock = null;
 
     #[ORM\Column]
+    #[Groups(["article:read","article:write"])]
     private ?\DateTimeImmutable $created_at = null;
     /**
      * Cantidad estimada de exclusividad, medida en Posibles compradores/stock disponible
      */
     #[ORM\Column]
+    #[Groups(["article:read","article:write"])]
     private ?int $exclusivityLevel = null;
     /**
      * Esta a la venta o no.
      */
     #[ORM\Column]
-    private ?bool $onSale = null;
+    #[Groups(["article:read","article:write"])]
+    #[ApiFilter(BooleanFilter::class)]
+    private ?bool $onSale = true;
+
+    public function __construct(string $name=null)
+    {
+        $this->name=$name;
+        $this->created_at = new \DateTimeImmutable();
+    }
 
     public function getId(): ?int
     {
@@ -67,12 +99,6 @@ class ArticlesExclusive
         return $this->name;
     }
 
-    public function setName(string $name): static
-    {
-        $this->name = $name;
-
-        return $this;
-    }
 
     public function getDescription(): ?string
     {
@@ -114,11 +140,9 @@ class ArticlesExclusive
     {
         return $this->created_at;
     }
-
-    public function setCreatedAt(\DateTimeImmutable $created_at): static
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self
     {
-        $this->created_at = $created_at;
-
+        $this->createdAt = $createdAt;
         return $this;
     }
 
