@@ -18,6 +18,7 @@ use App\Repository\ArticlesExclusiveRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ArticlesExclusiveRepository::class)]
 #[ApiResource (
@@ -48,16 +49,21 @@ class ArticlesExclusive
     #[ORM\Column(length: 255)]
     #[Groups(["article:read","article:write"])]
     #[ApiFilter(SearchFilter::class,strategy: 'partial')]
+    #[Assert\NotBlank]
+    #[Assert\Length(min:2,max:255)]
     private ?string $name = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(["article:read","article:write"])]
     #[ApiFilter(SearchFilter::class,strategy: 'partial')]
+    #[Assert\NotBlank]
     private ?string $description = null;
 
     #[ORM\Column]
     #[Groups(["article:read","article:write"])]
     #[ApiFilter(RangeFilter::class)]
+    #[Assert\NotBlank]
+    #[Assert\GreaterThan(0)]
     private ?int $price = null;
     /**
      * Stock disponible.
@@ -68,19 +74,23 @@ class ArticlesExclusive
 
     #[ORM\Column]
     #[Groups(["article:read","article:write"])]
+    #[Assert\NotBlank]
     private ?\DateTimeImmutable $created_at = null;
     /**
      * Cantidad estimada de exclusividad, medida en Posibles compradores/stock disponible
      */
     #[ORM\Column]
     #[Groups(["article:read","article:write"])]
-    private ?int $exclusivityLevel = null;
+    #[Assert\GreaterThanOrEqual(0)]
+    #[Assert\LessThanOrEqual(10)]
+    private ?int $exclusivityLevel = 0;
     /**
      * Esta a la venta o no.
      */
     #[ORM\Column]
     #[Groups(["article:read","article:write"])]
     #[ApiFilter(BooleanFilter::class)]
+    #[Assert\NotBlank]
     private ?bool $onSale = true;
 
     public function __construct(string $name=null)
